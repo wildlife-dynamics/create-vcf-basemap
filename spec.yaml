@@ -1,12 +1,139 @@
-id:  # Unique workflow identifier (kebab-case)
-requirements: # Package dependencies with channels
-  - name: ecoscope-workflows-core
-    version: "0.18.0"
-    channel: https://repo.prefix.dev/ecoscope-workflows/
+id: create_vcf_basemap
 
-# List of tasks in execution order
+requirements:
+  - name: "ecoscope-platform"
+    version: ">=2.11.3,<3"
+    channel: "https://repo.prefix.dev/ecoscope-workflows/"
+  - name: "vcf-basemap"
+    path: "REPO_ROOT"
+    editable: true
+
+task-instance-defaults:
+  skipif:
+    conditions:
+      - any_is_empty_df
+      - any_dependency_skipped
+
 workflow:
-  - name:  # Display name used for the configuration form UI
-    description:  # Description used for the configuration form
-    id:  # Unique task identifier (snake_case)
-    task:  # Function name from task library
+  - name: Workflow Details
+    id: workflow_details
+    task: set_workflow_details
+
+  - name: GEE Connection
+    id: gee_conn
+    task: set_gee_connection
+
+  - name: Load Region of Interest
+    id: roi
+    task: load_spatial_features_group
+    skipif:
+      conditions:
+        - never
+
+  - name: Endmember Palette
+    id: vcf_palette
+    task: set_vcf_palette
+    skipif:
+      conditions:
+        - never
+
+  - name: Download Basemap GeoTIFF
+    id: vcf_export
+    task: create_vcf_basemap
+    skipif:
+      conditions:
+        - any_is_empty_df
+        - any_dependency_skipped
+    partial:
+      client: ${{ workflow.gee_conn.return }}
+      palette: ${{ workflow.vcf_palette.return }}
+      roi: ${{ workflow.roi.return }}
+      root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+
+  - name: Preview Basemap
+    id: vcf_preview
+    task: draw_vcf_preview
+    skipif:
+      conditions:
+        - any_is_empty_df
+        - any_dependency_skipped
+    partial:
+      client: ${{ workflow.gee_conn.return }}
+      palette: ${{ workflow.vcf_palette.return }}
+      roi: ${{ workflow.roi.return }}
+
+  - name: Persist Preview HTML
+    id: persist_preview
+    task: persist_text
+    skipif:
+      conditions:
+        - any_dependency_skipped
+    partial:
+      text: ${{ workflow.vcf_preview.return }}
+      root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+      filename_suffix: "basemap"
+
+  - name: Basemap Map Widget
+    id: map_widget
+    task: create_map_widget_single_view
+    skipif:
+      conditions:
+        - any_dependency_skipped
+    partial:
+      title: "VCF Basemap"
+      view: null
+      data: ${{ workflow.persist_preview.return }}
+
+  - name: Draw Legend
+    id: vcf_legend
+    task: draw_vcf_legend
+    skipif:
+      conditions:
+        - never
+    partial:
+      palette: ${{ workflow.vcf_palette.return }}
+      root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+
+  - name: Persist Legend HTML
+    id: persist_legend
+    task: persist_text
+    skipif:
+      conditions:
+        - never
+    partial:
+      text: ${{ workflow.vcf_legend.return }}
+      root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+      filename_suffix: "legend"
+
+  - name: Legend Widget
+    id: legend_widget
+    task: create_map_widget_single_view
+    skipif:
+      conditions:
+        - never
+    partial:
+      title: "Endmember Triangle (VCF)"
+      view: null
+      data: ${{ workflow.persist_legend.return }}
+
+  - name: Collect Widgets
+    id: collect_widgets
+    task: collect_dashboard_widgets
+    skipif:
+      conditions:
+        - never
+    partial:
+      map_widget: ${{ workflow.map_widget.return }}
+      legend_widget: ${{ workflow.legend_widget.return }}
+
+  - name: Dashboard
+    id: vcf_dashboard
+    task: gather_dashboard
+    skipif:
+      conditions:
+        - never
+    partial:
+      details: ${{ workflow.workflow_details.return }}
+      widgets: ${{ workflow.collect_widgets.return }}
+      groupers: null
+      time_range: null
