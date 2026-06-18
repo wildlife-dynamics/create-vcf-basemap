@@ -5,8 +5,8 @@ requirements:
     version: ">=2.11.3,<3"
     channel: "https://repo.prefix.dev/ecoscope-workflows/"
   - name: "vcf-basemap"
-    path: "REPO_ROOT"
-    editable: true
+    version: "0.1.2.*"
+    channel: "https://repo.prefix.dev/ecoscope-workflows-custom/"
 
 task-instance-defaults:
   skipif:
