@@ -92,14 +92,16 @@ jobs:
           sed -i "s|/Users/la/vcf/create-vcf-basemap|${REPO_ROOT}|g" "$RELEASE_DIR/pixi.toml"
           sed -i "s|/Users/la/vcf/create-vcf-basemap|${REPO_ROOT}|g" "$RELEASE_DIR/pixi.lock"
       - name: Docker build + run
-        env:
-          ECOSCOPE_CONNECTIONS__TEST_GEE_CONNECTION: ${{ secrets.TEST_GEE_CONNECTION }}
         run: |
           pixi run --manifest-path $RELEASE_DIR/pixi.toml --locked -e default docker-build
+          # Create an empty parquet so the ROI mock returns no rows → GEE tasks skip
+          pixi run --manifest-path $RELEASE_DIR/pixi.toml --locked -e default \
+            python -c "import pandas as pd; pd.DataFrame().to_parquet('/tmp/empty_roi.parquet')"
           docker run --name $RELEASE_DIR -d \
             -v $(pwd)/.wt-tmp/$RELEASE_DIR-results:/workflow/results \
+            -v /tmp/empty_roi.parquet:/app/empty_roi.parquet:ro \
             -e PORT=4000 -p 4000:4000 \
-            -e ECOSCOPE_CONNECTIONS__TEST_GEE_CONNECTION \
+            -e WT_TASK_MOCK_IO__ECOSCOPE_PLATFORM_TASKS_IO_LOAD_SPATIAL_FEATURES_GROUP=/app/empty_roi.parquet \
             $RELEASE_DIR
           sleep 5
           docker ps
