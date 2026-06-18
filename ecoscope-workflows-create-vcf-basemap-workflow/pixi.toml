@@ -151,5 +151,5 @@ solve-group = "test"
 no-default-feature = true
 
 [tasks]
-docker-build = "docker buildx build --build-arg VCFBASEMAP_WORKSPACE_PATH=\"$PWD\" -t ecoscope-workflows-create-vcf-basemap-workflow ."
+docker-build = "cd .. && docker buildx build --build-arg VCFBASEMAP_WORKSPACE_PATH=\"$PWD\" -f ecoscope-workflows-create-vcf-basemap-workflow/Dockerfile -t ecoscope-workflows-create-vcf-basemap-workflow ."
 ecoscope-workflows-create-vcf-basemap-workflow = "python -m ecoscope_workflows_create_vcf_basemap_workflow.cli"
