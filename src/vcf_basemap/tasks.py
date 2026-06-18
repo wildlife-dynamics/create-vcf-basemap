@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import os
 import tempfile
+import time
 from typing import Annotated, Any
 
 import ee
@@ -272,7 +273,12 @@ def _download_basemap_tiled(
                     "crs": crs,
                 }
             )
-            r = requests.get(url, timeout=600)
+            for attempt in range(4):
+                r = requests.get(url, timeout=600)
+                if r.status_code < 500:
+                    break
+                if attempt < 3:
+                    time.sleep(10 * (attempt + 1))  # 10 s, 20 s, 30 s
             r.raise_for_status()
             fd, path = tempfile.mkstemp(suffix=".tif")
             os.close(fd)
