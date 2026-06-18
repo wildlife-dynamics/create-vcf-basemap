@@ -167,6 +167,12 @@ def run(
             put_result = result_store.put("result.json", result_bytes)
             if not put_result:
                 raise RuntimeError("Failed to put result json in result store.")
+        # Force-flush so BatchSpanProcessor doesn't lose the .cli span when
+        # the subprocess exits and the daemon batch thread is killed.
+        try:
+            trace.get_tracer_provider().force_flush()
+        except Exception:  # noqa: BLE001
+            pass
     else:
         response = dispatch(
             execution_mode, mock_io, params, validate_params_schema=False
