@@ -1,6 +1,6 @@
 # Create VCF Basemap
 
-MODIS VCF + SRTM hillshade RGB basemap for Kenya
+MODIS VCF + SRTM hillshade RGB basemap
 
 ## Author
 
