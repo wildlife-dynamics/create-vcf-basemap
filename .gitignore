@@ -10,9 +10,6 @@ build/
 .venv/
 venv/
 
-# Pixi
-.pixi/
-
 # CI
 .wt-tmp/
 
@@ -26,9 +23,6 @@ dmypy.json
 
 # pytype static type analyzer
 .pytype/
-
-# Ruff stuff:
-.ruff_cache/
 
 # PyPI configuration file
 .pypirc
@@ -51,9 +45,3 @@ CLAUDE.md
 # GEE service account key files — never commit credentials
 *service-account*.json
 eewd-omukutirodney*.json
-
-pixi.lock
-
-# pixi environments
-.pixi/*
-!.pixi/config.toml
