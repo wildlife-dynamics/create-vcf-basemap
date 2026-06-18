@@ -1,0 +1,29 @@
+default:
+  name: Default - Kenya AOI
+  description: Default palette and export settings with a Kenya bounding-box AOI
+  params:
+    workflow_details:
+      name: VCF Basemap - Kenya
+      description: MODIS VCF + SRTM hillshade basemap for Kenya
+    gee_conn:
+      data_source:
+        name: test-gee-connection
+    roi:
+      config:
+        file_path: ../kenya_aoi.parquet
+        name_column: name
+    vcf_palette:
+      bare_hex: B89070
+      herb_hex: B3B2A0
+      tree_hex: 4F7B47
+      water_hex: 4A7BA8
+      ocean_hex: 2A5A82
+      water_occurrence_min: 50
+    vcf_export:
+      year: 2020
+      scale_m: 250
+      hillshade_weight: 0.6
+      output_name: vcf_hillshade_basemap
+    vcf_preview:
+      year: 2020
+      hillshade_weight: 0.6

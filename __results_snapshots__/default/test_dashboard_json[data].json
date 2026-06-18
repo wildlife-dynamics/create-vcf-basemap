@@ -1,0 +1,30 @@
+{
+  "error": null,
+  "result": {
+    "filters": null,
+    "layout": [],
+    "metadata": {
+      "description": "MODIS VCF + SRTM hillshade basemap for Kenya",
+      "title": "VCF Basemap - Kenya"
+    },
+    "views": {
+      "{}": [
+        {
+          "data": "str",
+          "id": 0,
+          "is_filtered": false,
+          "title": "VCF Basemap",
+          "widget_type": "map"
+        },
+        {
+          "data": "str",
+          "id": 1,
+          "is_filtered": false,
+          "title": "Endmember Triangle (VCF)",
+          "widget_type": "map"
+        }
+      ]
+    }
+  },
+  "trace": null
+}
