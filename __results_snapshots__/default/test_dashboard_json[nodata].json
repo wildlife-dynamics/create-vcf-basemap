@@ -1,0 +1,15 @@
+{
+  "error": null,
+  "result": {
+    "filters": null,
+    "layout": [],
+    "metadata": {
+      "description": "MODIS VCF + SRTM hillshade basemap for Kenya",
+      "title": "VCF Basemap - Kenya"
+    },
+    "views": {
+      "{}": []
+    }
+  },
+  "trace": null
+}

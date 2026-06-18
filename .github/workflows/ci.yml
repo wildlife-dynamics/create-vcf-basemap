@@ -67,6 +67,8 @@ jobs:
           sed -i "s|/Users/la/vcf/create-vcf-basemap|${REPO_ROOT}|g" "$RELEASE_DIR/pixi.toml"
           sed -i "s|/Users/la/vcf/create-vcf-basemap|${REPO_ROOT}|g" "$RELEASE_DIR/pixi.lock"
       - name: Test
+        env:
+          ECOSCOPE_CONNECTIONS__TEST_GEE_CONNECTION: ${{ secrets.TEST_GEE_CONNECTION }}
         run: >-
           pixi run --manifest-path $RELEASE_DIR/pixi.toml
           --locked -e test
