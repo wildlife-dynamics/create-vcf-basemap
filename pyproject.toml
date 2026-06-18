@@ -18,6 +18,7 @@ vcf_basemap = "vcf_basemap.tasks"
 
 [tool.hatch.version]
 source = "vcs"
+fallback-version = "0.0.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vcf_basemap"]
@@ -29,11 +30,4 @@ platforms = ["osx-arm64"]
 [tool.pixi.pypi-dependencies]
 vcf-basemap = { path = ".", editable = true }
 
-[tool.pixi.dependencies]
-rattler-build = "*"
-hatch = "*"
-hatch-vcs = "*"
-pip = "*"
-
 [tool.pixi.tasks]
-build-release = "./publish/build.sh"
