@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "vcf-basemap"
-version = "0.1.0"
+dynamic = ["version"]
 description = "MODIS VCF + SRTM hillshade basemap for Kenya – Ecoscope Platform SDK workflow"
 requires-python = ">=3.11"
 dependencies = [
@@ -16,6 +16,9 @@ dependencies = [
 [project.entry-points."wt_registry"]
 vcf_basemap = "vcf_basemap.tasks"
 
+[tool.hatch.version]
+source = "vcs"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/vcf_basemap"]
 
@@ -26,4 +29,11 @@ platforms = ["osx-arm64"]
 [tool.pixi.pypi-dependencies]
 vcf-basemap = { path = ".", editable = true }
 
+[tool.pixi.dependencies]
+rattler-build = "*"
+hatch = "*"
+hatch-vcs = "*"
+pip = "*"
+
 [tool.pixi.tasks]
+build-release = "./publish/build.sh"
