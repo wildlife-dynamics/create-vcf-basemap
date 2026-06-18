@@ -191,6 +191,10 @@ class CustomPNGSnapshot(CustomSnapshotDirnameMixin, PNGImageSnapshotExtension):
         # test_location & index args from SnapshotAssertion, and SnapshotAssertion.get_assert_diff
         # passes those args to the extension.diff_lines call, then we can call self.get_location
         # with those args here and resolve a more human readable name.
+        if not isinstance(snapshot_data, (bytes, bytearray)) or not isinstance(
+            serialized_data, (bytes, bytearray)
+        ):
+            return
         snapshot_data_hash = hashlib.sha256(snapshot_data).hexdigest()[0:7]
         serialized_data_hash = hashlib.sha256(serialized_data).hexdigest()[0:7]
         similarity = self.get_structural_similarity(serialized_data, snapshot_data)

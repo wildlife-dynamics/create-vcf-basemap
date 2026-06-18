@@ -43,10 +43,15 @@ def test_dashboard_json(
 
 @pytest.mark.asyncio
 async def test_iframes(
+    no_data: bool,
     snapshot_png: SnapshotAssertion,
     screenshot_coros: list[Coroutine[Any, Any, tuple[str, bytes]]],
     check: pytest_check.context_manager.CheckContextManager,
 ):
+    if not no_data:
+        pytest.skip(
+            "EE map tile screenshots use ephemeral session URLs — not reproducible across runs"
+        )
     screenshots = await asyncio.gather(*screenshot_coros)
     assert len(screenshots) == len(screenshot_coros)
     for widget_title, actual_png in screenshots:
