@@ -79,7 +79,6 @@ def run(
     from wt_task.tracing import (
         attach_context,
         configure_tracer,
-        make_otel_console_exporter_file_dst_kws,
     )
 
     try:
@@ -136,17 +135,67 @@ def run(
                 "When using --otel-exporter console with --otel-console-exporter-dst file, "
                 "ECOSCOPE_WORKFLOWS_RESULTS must be a file URL (file://...)."
             )
-        otel_exporter_kws |= make_otel_console_exporter_file_dst_kws(
-            target_dir=Path(parsed_results_url.path),
+        # Bypass wt_task.tracing.configure_tracer (which requires the GCP exporter
+        # to be importable and uses BatchSpanProcessor — async, unreliable on subprocess
+        # exit). Instead set up the SDK provider directly with SimpleSpanProcessor so
+        # spans are written synchronously when each span ends, with no force_flush needed.
+        try:
+            from opentelemetry.sdk.resources import Resource as _Resource
+            from opentelemetry.sdk.trace import TracerProvider as _SDKTracerProvider
+            from opentelemetry.sdk.trace.export import (
+                ConsoleSpanExporter as _CSE,
+            )
+            from opentelemetry.sdk.trace.export import (
+                SimpleSpanProcessor as _SSP,
+            )
+
+            _target_dir = Path(parsed_results_url.path)
+            _target_dir.mkdir(parents=True, exist_ok=True)
+            _trace_file = (_target_dir / "otel_traces.jsonl").open("a", buffering=1)
+            _resource = _Resource.create(
+                {"service.name": RELEASE_NAME, "service.version": _version}
+            )
+            _sdk_provider = _SDKTracerProvider(resource=_resource)
+            _sdk_provider.add_span_processor(
+                _SSP(
+                    _CSE(
+                        out=_trace_file,
+                        formatter=lambda span: span.to_json(indent=None) + os.linesep,
+                    )
+                )
+            )
+            trace.set_tracer_provider(_sdk_provider)
+        except ImportError:
+            pass  # OTel SDK not available; spans will be no-ops
+    else:
+        configure_tracer(
+            RELEASE_NAME,
+            version=_version,
+            exporter=otel_exporter,
+            exporter_kws=otel_exporter_kws,
         )
-    configure_tracer(
-        RELEASE_NAME,
-        version=_version,
-        exporter=otel_exporter,
-        exporter_kws=otel_exporter_kws,
-    )
     if (traceparent := os.environ.get("TRACEPARENT")) is not None:
-        attach_context(traceparent, tracestate=os.environ.get("TRACESTATE"))
+        # Bypass wt_task.tracing.attach_context: it guards on TRACING_AVAILABLE which
+        # is False when opentelemetry-exporter-gcp-trace is absent (even with the SDK
+        # installed). Use the OTel API directly — these imports are always available.
+        try:
+            from opentelemetry import context as _otel_ctx
+            from opentelemetry import propagate as _otel_propagate
+            from opentelemetry.propagate import (
+                set_global_textmap as _set_global_textmap,
+            )
+            from opentelemetry.trace.propagation.tracecontext import (
+                TraceContextTextMapPropagator as _W3CPropagator,
+            )
+
+            _set_global_textmap(_W3CPropagator())
+            _carrier: dict[str, str] = {"traceparent": traceparent}
+            if _tracestate := os.environ.get("TRACESTATE"):
+                _carrier["tracestate"] = _tracestate
+            _ctx = _otel_propagate.extract(_carrier)
+            _otel_ctx.attach(_ctx)
+        except ImportError:
+            attach_context(traceparent, tracestate=os.environ.get("TRACESTATE"))
     if _HAS_OTEL:
         tracer = trace.get_tracer(__name__)
         tracer_attributes = {
@@ -167,6 +216,7 @@ def run(
             put_result = result_store.put("result.json", result_bytes)
             if not put_result:
                 raise RuntimeError("Failed to put result json in result store.")
+        # SimpleSpanProcessor writes synchronously on span end — no force_flush needed.
     else:
         response = dispatch(
             execution_mode, mock_io, params, validate_params_schema=False

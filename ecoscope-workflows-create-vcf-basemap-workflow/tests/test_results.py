@@ -97,8 +97,7 @@ def test_otel_traces_success(
     # the cli span represents the entire workflow execution via cli. it is either the child of
     # the root span (cli mode) or the app request span (app mode)
     # - its name is the workflow name with .cli suffix
-    # - its attributes include execution_mode, mock_io, config.time_range, config.groupers
-    # - config.time_range and config.groupers are JSON-dumps of respective config sections
+    # - its attributes include execution_mode, mock_io
     cli_span = next(
         s
         for s in otel_traces_success
