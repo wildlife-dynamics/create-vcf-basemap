@@ -1,0 +1,32 @@
+name: Build Release
+
+on:
+  workflow_call:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history so hatch-vcs can derive version from tags
+
+      - name: Install pixi
+        run: curl -fsSL https://pixi.sh/install.sh | bash && echo "$HOME/.pixi/bin" >> $GITHUB_PATH
+
+      - name: Install build tools
+        run: pixi global install rattler-build hatch hatch-vcs pip
+
+      - name: Build release
+        run: bash ./publish/build.sh
+
+      - name: Upload conda channel
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            /tmp/ecoscope-workflows-custom/release/artifacts/
+            !/tmp/ecoscope-workflows-custom/release/artifacts/bld
+            !/tmp/ecoscope-workflows-custom/release/artifacts/src_cache
+          if-no-files-found: error
+          compression-level: 0
