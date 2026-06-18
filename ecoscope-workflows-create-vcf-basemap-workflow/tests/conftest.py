@@ -5,6 +5,8 @@ import functools
 import hashlib
 import io
 import json
+import os
+import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -189,6 +191,10 @@ class CustomPNGSnapshot(CustomSnapshotDirnameMixin, PNGImageSnapshotExtension):
         # test_location & index args from SnapshotAssertion, and SnapshotAssertion.get_assert_diff
         # passes those args to the extension.diff_lines call, then we can call self.get_location
         # with those args here and resolve a more human readable name.
+        if not isinstance(snapshot_data, (bytes, bytearray)) or not isinstance(
+            serialized_data, (bytes, bytearray)
+        ):
+            return
         snapshot_data_hash = hashlib.sha256(snapshot_data).hexdigest()[0:7]
         serialized_data_hash = hashlib.sha256(serialized_data).hexdigest()[0:7]
         similarity = self.get_structural_similarity(serialized_data, snapshot_data)
@@ -396,17 +402,31 @@ def response_json_success(
     if conftest_tracer_dst.exists():
         with conftest_tracer_dst.open("w") as f:
             pass
-    data_connections_env_vars = None
+    data_connections_env_vars: dict = {}
+    if gee_conn_json := os.environ.get("ECOSCOPE_CONNECTIONS__TEST_GEE_CONNECTION"):
+        try:
+            sa = json.loads(gee_conn_json)
+            _pfx = "ECOSCOPE_WORKFLOWS__CONNECTIONS__EARTHENGINE__TEST-GEE-CONNECTION__"
+            if sa.get("client_email"):
+                data_connections_env_vars[f"{_pfx}SERVICE_ACCOUNT"] = sa["client_email"]
+            if sa.get("private_key"):
+                data_connections_env_vars[f"{_pfx}PRIVATE_KEY"] = sa["private_key"]
+            if sa.get("project_id"):
+                data_connections_env_vars[f"{_pfx}EE_PROJECT"] = sa["project_id"]
+        except (ValueError, AttributeError):
+            pass
     if no_data:
         import pandas as pd
 
         mock_io_dir = tmp_path_factory.mktemp("mock-io")
         example_return_path = mock_io_dir.joinpath("empty.parquet")
         pd.DataFrame().to_parquet(example_return_path)
-        data_connections_env_vars = {
-            f"WT_TASK_MOCK_IO__{ref.replace('.', '_').upper()}": example_return_path.as_posix()
-            for ref in io_tasks_importable_references
-        }
+        data_connections_env_vars.update(
+            {
+                f"WT_TASK_MOCK_IO__{ref.replace('.', '_').upper()}": example_return_path.as_posix()
+                for ref in io_tasks_importable_references
+            }
+        )
     with conftest_tracer.start_as_current_span(
         "response_json_success_pytest_fixture",
         attributes={
@@ -420,10 +440,15 @@ def response_json_success(
             success_case,
             results_subdir_success,
             matchspec_override,
-            data_connections_env_vars,
+            data_connections_env_vars or None,
             traceparent=traceparent,
         )
     conftest_tracer_provider.force_flush()
+    # Copy conftest spans to a per-run file so that a later parameterization
+    # truncating conftest_tracer_dst cannot wipe traces another fixture still needs.
+    run_conftest_dst = results_subdir_success / "conftest_otel_traces.jsonl"
+    if conftest_tracer_dst.exists():
+        shutil.copy2(conftest_tracer_dst, run_conftest_dst)
     yield result
     if conftest_tracer_dst.exists():
         with conftest_tracer_dst.open("r+") as f:
@@ -502,15 +527,15 @@ class ReconstructedOtelSpan:
 
 @pytest.fixture(scope="session")
 def otel_traces_success(
-    conftest_tracer_dst: Path,
     results_subdir_success: Path,
     response_json_success: dict,
 ) -> list[ReconstructedOtelSpan]:
     """Fixture to load OTEL traces from the results directory."""
     assert isinstance(response_json_success, dict)
     traces = []
+    run_conftest_dst = results_subdir_success / "conftest_otel_traces.jsonl"
     cli_tracer_dst = results_subdir_success / "otel_traces.jsonl"
-    for dst in [conftest_tracer_dst, cli_tracer_dst]:
+    for dst in [run_conftest_dst, cli_tracer_dst]:
         if dst.exists():
             with dst.open("r") as f:
                 for line in f:
