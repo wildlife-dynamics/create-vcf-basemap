@@ -212,7 +212,7 @@
           "description": "Layer name (only applicable to geopackage files)",
           "ecoscope:advanced": true,
           "title": "Layer",
-          "anyOf": [{"type": "string"}, {"type": "null"}]
+          "type": ["string", "null"]
         }
       },
       "required": [
@@ -239,7 +239,7 @@
           "description": "Layer name (only applicable for geopackage files)",
           "ecoscope:advanced": true,
           "title": "Layer",
-          "anyOf": [{"type": "string"}, {"type": "null"}]
+          "type": ["string", "null"]
         }
       },
       "required": [
